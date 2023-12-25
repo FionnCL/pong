@@ -151,7 +151,6 @@ int main(void)
         if(waiting){ drawMenu(); }
         else if(activeRound){ drawRound();  UpdateMusicStream(roundMusic);}
         else { drawTransition(); }
-
     }
 
     UnloadMusicStream(roundMusic);
