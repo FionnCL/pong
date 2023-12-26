@@ -1,5 +1,11 @@
 # pong
 
+## Image
+
+![An image of the game](https://github.com/FionnCL/pong/main/README-image.png?raw=true)
+
+## About
+
 This is my first introduction to working with graphical libraries, in particular, raylib.
 
 To play, simply compile, and run the executable.
