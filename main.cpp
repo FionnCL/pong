@@ -19,6 +19,7 @@ class Paddle {
 
 const int screenWidth = 1280;
 const int screenHeight = 720;
+const Color screenColor = {5, 10, 5, 255};
 
 int width = 25;
 int height = 100;
@@ -78,19 +79,17 @@ void playerAndAIMovement(){
     p2y += p2v;
 
     // AI
-    ballpos.y < p1.getY() + 50 ? p1v = -2.0f : p1v = 2.0f;
+    // Min functions used to get smoother movement.
+    float paddleCentre = p1.getY() + 50;
+    ballpos.y < paddleCentre ? p1v = std::min(paddleCentre - ballpos.y, -2.0f) : p1v = std::min(ballpos.y - paddleCentre, 2.0f);
     p1y += p1v;
 }
 
 void drawMenu(){
     if(IsKeyDown(KEY_X) || IsKeyDown(KEY_ESCAPE)) { waiting = false; }
 
-    BeginDrawing();
-
-        ClearBackground(BLACK);
-        DrawText("Press X to Start!", screenWidth/2 - 50, screenHeight/2 - 8, 16, WHITE);
-
-    EndDrawing();
+    ClearBackground(screenColor);
+    DrawText("Press X to Start!", screenWidth/2 - 50, screenHeight/2 - 8, 16, WHITE);
 }
 
 Sound transitionSound = LoadSound("./resources/bass.wav");
@@ -100,13 +99,8 @@ int transitionFunctionInput = 1;
 void drawTransition(){
     PlaySound(transitionSound);
 
-    BeginDrawing();
-
-        ClearBackground(BLACK);
-        DrawRectangle(0 , 0, screenWidth, screenHeight, {255, 255, 255, transitionFunctionValue});
-        printf("%i\n", transitionFunctionValue);
-
-    EndDrawing();
+    ClearBackground(screenColor);
+    DrawRectangle(0 , 0, screenWidth, screenHeight, {255, 255, 255, transitionFunctionValue});
 
     transitionFunctionValue+=2;
     if(transitionFunctionValue == 0){ activeRound = true; }
@@ -121,21 +115,28 @@ void drawRound(){
     collisionDetection();
     outOfBounds();
 
-    BeginDrawing();
+    ClearBackground(screenColor);
 
-        ClearBackground(BLACK);
+    // DrawLineEx(rightx1y1, rightx2y2, 2, MAROON); 
+    // DrawLineEx(leftx1y1, leftx2y2, 2, MAROON); 
 
-        // DrawLineEx(rightx1y1, rightx2y2, 2, MAROON); 
-        // DrawLineEx(leftx1y1, leftx2y2, 2, MAROON); 
+    p1.draw(p1y);
+    p2.draw(p2y);
 
-        p1.draw(p1y);
-        p2.draw(p2y);
+    DrawCircleV(ballpos, bRad, WHITE);
 
-        DrawCircleV(ballpos, bRad, WHITE);
+    DrawText(TextFormat("%i | %i", p1Score, p2Score), screenWidth/2 - 16, 10, 16, WHITE);
+}
 
-        DrawText(TextFormat("%i | %i", p1Score, p2Score), screenWidth/2 - 16, 10, 16, WHITE);
-
-    EndDrawing();
+const int monitorLineGap = 8;
+const int monitorLineCount = screenHeight / monitorLineGap;
+const int lineWidth = 2;
+void drawMonitor(){
+    float ys = 0;
+    for(int i = 0; i <= monitorLineCount; i++){
+        DrawLineEx({0, ys}, {screenWidth, ys}, lineWidth, {75, 210, 115, 10});
+        ys += monitorLineGap;
+    }
 }
 
 int main(void)
@@ -144,16 +145,16 @@ int main(void)
     SetTargetFPS(165);
 
     InitAudioDevice();
-    Music roundMusic = LoadMusicStream("./resources/round-background.wav");
-    PlayMusicStream(roundMusic);
 
     while (!WindowShouldClose()) {
-        if(waiting){ drawMenu(); }
-        else if(activeRound){ drawRound();  UpdateMusicStream(roundMusic);}
-        else { drawTransition(); }
+        BeginDrawing();
+            if(waiting){ drawMenu(); }
+            else if(activeRound){ drawRound(); }
+            else { drawTransition(); }
+            drawMonitor();
+        EndDrawing();
     }
 
-    UnloadMusicStream(roundMusic);
     UnloadSound(transitionSound);
     CloseAudioDevice();
     CloseWindow();
