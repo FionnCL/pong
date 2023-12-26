@@ -2,7 +2,7 @@
 
 ## Image
 
-![An image of the game](https://github.com/FionnCL/pong/main/README-image.png?raw=true)
+![An image of the game](https://github.com/FionnCL/pong/blob/main/README-image.png)
 
 ## About
 
