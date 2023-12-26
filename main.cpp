@@ -2,6 +2,15 @@
 #include <cstdio>
 #include <math.h> 
 
+const int screenWidth = 1280;
+const int screenHeight = 720;
+const Color screenColor = {5, 10, 5, 255};
+const Color entityColor = {50, 245, 150, 255};
+
+Sound paddleWAV;
+Sound scoreWAV;
+Sound wallWAV;
+
 class Paddle {
     private:
         float posx, posy;
@@ -12,14 +21,10 @@ class Paddle {
             this->posy = posy;
         }
 
-        void draw(float posy){ this->posy = posy; DrawRectangle(this->posx, posy, 25, 100, WHITE); }
+        void draw(float posy){ this->posy = posy; DrawRectangle(this->posx, posy, 25, 100, entityColor); }
         float getX(){ return this->posx; }
         float getY(){ return this->posy; }
 };
-
-const int screenWidth = 1280;
-const int screenHeight = 720;
-const Color screenColor = {5, 10, 5, 255};
 
 int width = 25;
 int height = 100;
@@ -56,7 +61,7 @@ void collisionDetection(){
     col = (yCol1 && xCol1) || (yCol2 && xCol2);
 
     // Deals with ball velocities.
-    if (col) rightHeading = !rightHeading;
+    if (col) {rightHeading = !rightHeading; PlaySound(paddleWAV); }
     if(yCol1 && xCol1) currYHeading += p1v * ballSpeedMultiplier;
     if(yCol2 && xCol2) currYHeading += p2v * ballSpeedMultiplier;
     ballpos.y += currYHeading;
@@ -65,9 +70,9 @@ void collisionDetection(){
 
 void outOfBounds(){
     // Hits top/bottom of screen or player scores.
-    if(ballpos.y + bRad >= screenHeight || ballpos.y - bRad <= 0) currYHeading = -currYHeading;
-    if(ballpos.x >= screenWidth) { p1Score++; resetRound(); }
-    if(ballpos.x <= 0) { p2Score++; resetRound(); }
+    if(ballpos.y + bRad >= screenHeight || ballpos.y - bRad <= 0) { currYHeading = -currYHeading; PlaySound(wallWAV); }
+    if(ballpos.x >= screenWidth) { p1Score++; resetRound(); PlaySound(scoreWAV); }
+    if(ballpos.x <= 0) { p2Score++; resetRound(); PlaySound(scoreWAV); }
 }
 
 void playerAndAIMovement(){
@@ -81,7 +86,12 @@ void playerAndAIMovement(){
     // AI
     // Min functions used to get smoother movement.
     float paddleCentre = p1.getY() + 50;
-    ballpos.y < paddleCentre ? p1v = std::min(paddleCentre - ballpos.y, -2.0f) : p1v = std::min(ballpos.y - paddleCentre, 2.0f);
+    if(ballpos.y < paddleCentre){
+        p1.getY() > 0 ? p1v = std::min(paddleCentre - ballpos.y, -2.0f) : p1v = 0.0f;
+    } else {
+        p1.getY() + 100 < screenHeight ? p1v = std::min(ballpos.y - paddleCentre, 2.0f) : p1v = 0.0f;
+    }
+    
     p1y += p1v;
 }
 
@@ -89,16 +99,13 @@ void drawMenu(){
     if(IsKeyDown(KEY_X) || IsKeyDown(KEY_ESCAPE)) { waiting = false; }
 
     ClearBackground(screenColor);
-    DrawText("Press X to Start!", screenWidth/2 - 50, screenHeight/2 - 8, 16, WHITE);
+    DrawText("Press X to Start!", screenWidth/2 - 50, screenHeight/2 - 8, 16, entityColor);
 }
 
-Sound transitionSound = LoadSound("./resources/bass.wav");
 bool playOnce = true;
 unsigned char transitionFunctionValue = 0;
 int transitionFunctionInput = 1;
 void drawTransition(){
-    PlaySound(transitionSound);
-
     ClearBackground(screenColor);
     DrawRectangle(0 , 0, screenWidth, screenHeight, {255, 255, 255, transitionFunctionValue});
 
@@ -123,9 +130,9 @@ void drawRound(){
     p1.draw(p1y);
     p2.draw(p2y);
 
-    DrawCircleV(ballpos, bRad, WHITE);
+    DrawCircleV(ballpos, bRad, entityColor);
 
-    DrawText(TextFormat("%i | %i", p1Score, p2Score), screenWidth/2 - 16, 10, 16, WHITE);
+    DrawText(TextFormat("%i | %i", p1Score, p2Score), screenWidth/2 - 16, 10, 16, entityColor);
 }
 
 const int monitorLineGap = 8;
@@ -146,16 +153,43 @@ int main(void)
 
     InitAudioDevice();
 
+    // I feel like loading these here and declaring them globally is bad practice.
+    paddleWAV = LoadSound("./resources/paddle.wav");
+    scoreWAV = LoadSound("./resources/score.wav");
+    wallWAV = LoadSound("./resources/wall.wav");
+
     while (!WindowShouldClose()) {
         BeginDrawing();
             if(waiting){ drawMenu(); }
             else if(activeRound){ drawRound(); }
             else { drawTransition(); }
+
+            DrawText("ESC: Close Game", 10, 10, 8, entityColor);
             drawMonitor();
+
+            // Illusion of monitor being convex.
+            DrawCircleGradient(
+                screenWidth/2, 
+                screenHeight/2, 
+                500, 
+                {255, 255, 255, 5}, 
+                {255, 255, 255, 0}
+            );
+            DrawCircleGradient(
+                screenWidth/2, 
+                screenHeight/2, 
+                screenWidth, 
+                {0, 0, 0, 0}, 
+                {0, 0, 0, 200}
+            );
+
+
         EndDrawing();
     }
 
-    UnloadSound(transitionSound);
+    UnloadSound(paddleWAV);
+    UnloadSound(scoreWAV);
+    UnloadSound(wallWAV);
     CloseAudioDevice();
     CloseWindow();
     return 0;
